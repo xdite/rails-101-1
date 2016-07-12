@@ -1,6 +1,5 @@
 class GroupsController < ApplicationController
-
-  before_action :authenticate_user! , only: [:new, :create, :edit, :update, :destory]
+  before_action :authenticate_user!, only: [:new, :create, :edit, :update, :destory]
   before_action :find_group_and_check_permission, only: [:edit, :update, :destory]
 
   def index
@@ -13,7 +12,7 @@ class GroupsController < ApplicationController
 
   def show
     @group = Group.find(params[:id])
-    @posts = @group.posts.recent.paginate(:page => params[:page], :per_page => 5)
+    @posts = @group.posts.recent.paginate(page: params[:page], per_page: 5)
   end
 
   def edit
@@ -31,11 +30,10 @@ class GroupsController < ApplicationController
   end
 
   def update
-
     find_group_and_check_permission
 
     if @group.update(group_params)
-      redirect_to groups_path, notice: "Update Success"
+      redirect_to groups_path, notice: 'Update Success'
     else
       render :edit
     end
@@ -45,9 +43,34 @@ class GroupsController < ApplicationController
     find_group_and_check_permission
 
     @group.destroy
-    redirect_to groups_path, alert: "Group deleted"
+    redirect_to groups_path, alert: 'Group deleted'
   end
 
+  def join
+    @group = Group.find(params[:id])
+
+    if !current_user.is_member_of?(@group)
+      current_user.join!(@group)
+      flash[:notice] = "加入本討論版成功！"
+    else
+      flash[:warning] = "你已經是本討論版成員了！"
+    end
+
+    redirect_to group_path(@group)
+  end
+
+  def quit
+    @group = Group.find(params[:id])
+
+    if current_user.is_member_of?(@group)
+      current_user.quit!(@group)
+      flash[:alert] = "已退出本討論版！"
+    else
+      flash[:warning] = "你不是本討論版成員，怎麼退出 XD"
+    end
+
+    redirect_to group_path(@group)
+  end
 
   private
 
@@ -55,12 +78,11 @@ class GroupsController < ApplicationController
     @group = Group.find(params[:id])
 
     if current_user != @group.user
-      redirect_to root_path, alert: "You have no permission."
+      redirect_to root_path, alert: 'You have no permission.'
     end
   end
 
   def group_params
     params.require(:group).permit(:title, :description)
   end
-
 end
